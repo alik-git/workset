@@ -5,9 +5,9 @@ Document the package's public Python API here.
 ## `do_useful_thing`
 
 ```python
-import mypackage
+import workset
 
-result = mypackage.do_useful_thing("world")
+result = workset.do_useful_thing("world")
 ```
 
 `do_useful_thing` is the starter public function exposed by this template.

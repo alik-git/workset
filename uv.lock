@@ -160,7 +160,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mypackage"
+name = "workset"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

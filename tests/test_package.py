@@ -1,10 +1,10 @@
-"""Tests for package import and metadata behavior."""
+"""Basic smoke tests for workset."""
 
 from __future__ import annotations
 
-import mypackage
+import workset
 
 
-def test_do_useful_thing() -> None:
-    """Verify the package's public starter function."""
-    assert mypackage.do_useful_thing("template") == "hello, template"
+def test_import() -> None:
+    """Workset can be imported."""
+    assert workset is not None

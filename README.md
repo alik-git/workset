@@ -17,10 +17,10 @@ CI, and package build checks for both pip and uv workflows.
 2. Rename the package folder:
 
    ```bash
-   mv src/mypackage src/your_package_name
+   mv src/workset src/your_package_name
    ```
 
-3. Replace `mypackage` with your package name in:
+3. Replace `workset` with your package name in:
 
    - `name`
    - `[project.urls]`
@@ -93,8 +93,8 @@ python -m pip install -e ".[dev]"
 Conda can still own the outer environment if needed:
 
 ```bash
-conda create -n mypackage python=3.11
-conda activate mypackage
+conda create -n workset python=3.11
+conda activate workset
 python -m pip install -e ".[dev]"
 ```
 
@@ -103,15 +103,15 @@ python -m pip install -e ".[dev]"
 Run the starter Python API:
 
 ```python
-import mypackage
+import workset
 
-result = mypackage.do_useful_thing("world")
+result = workset.do_useful_thing("world")
 ```
 
 Run the starter CLI:
 
 ```bash
-mypackage
+workset
 ```
 
 ## Development Workflow
@@ -152,7 +152,7 @@ uv run pre-commit install
 ## Project Layout
 
 ```text
-src/mypackage/
+src/workset/
   __init__.py   # public import surface
   package.py    # reusable package logic
   cli.py        # command-line boundary
