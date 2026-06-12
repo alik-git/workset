@@ -49,7 +49,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         return _main(args)
     except WorksetError as exc:
-        print(f"workset: {exc}", file=sys.stderr)
+        LOGGER.error("%s", exc)
         return 2
     except KeyboardInterrupt:
         return 130
@@ -65,7 +65,7 @@ def _main(args: list[str]) -> int:
     if command == "new":
         return _cmd_new(args[1:])
 
-    print(f"workset: unknown command {command!r}", file=sys.stderr)
+    LOGGER.error("unknown command: %s", command)
     _print_help()
     return 2
 
@@ -89,7 +89,7 @@ def _cmd_new(args: list[str]) -> int:
         arg = rest[i]
         if arg in {"--dest", "-d"}:
             if i + 1 >= len(rest):
-                print("workset: --dest requires a path", file=sys.stderr)
+                LOGGER.error("--dest requires a path")
                 return 2
             dest = Path(rest[i + 1]).expanduser()
             i += 2
@@ -100,7 +100,7 @@ def _cmd_new(args: list[str]) -> int:
             no_smoke = True
             i += 1
         elif arg.startswith("-"):
-            print(f"workset: unknown option {arg!r}", file=sys.stderr)
+            LOGGER.error("unknown option: %s", arg)
             return 2
         else:
             repo_specs.append(arg)
