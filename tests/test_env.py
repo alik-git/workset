@@ -45,8 +45,8 @@ def test_detect_backend_none(tmp_path: Path) -> None:
 def test_infer_import_name_from_veneer_editables(tmp_path: Path) -> None:
     """Infer import name from veneer.toml editables packages."""
     lines = (
-        "[python]\nbase_conda_env = \"x\"\n"
-        "[editables]\npackages = [\"source/minerva_lab\"]\n"
+        '[python]\nbase_conda_env = "x"\n'
+        '[editables]\npackages = ["source/minerva_lab"]\n'
     )
     (tmp_path / "veneer.toml").write_text(lines, encoding="utf-8")
     (tmp_path / "source" / "minerva_lab").mkdir(parents=True)
@@ -88,8 +88,6 @@ def test_setup_env_veneer_success(
     ok, msg = setup_env(tmp_path, "veneer")
     assert ok is True
     assert "veneer ok" in msg
-
-
 
 
 def test_setup_env_uv_success(
