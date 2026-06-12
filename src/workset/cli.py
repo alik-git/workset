@@ -32,6 +32,7 @@ def _configure_logging() -> None:
     if use_color:
         try:
             import colorlog
+
             handler.setFormatter(
                 colorlog.ColoredFormatter(_COLOR_FORMAT, log_colors=_LOG_COLORS)
             )

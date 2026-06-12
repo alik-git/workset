@@ -34,6 +34,81 @@ def setup_env(worktree_path: Path, backend: str) -> tuple[bool, str]:
     return True, "no env backend detected"
 
 
+def cross_install_editables(
+    worktree_path: Path,
+    extra_paths: list[Path],
+) -> tuple[bool, str]:
+    """Install extra editable packages directly into a veneer-managed venv.
+
+    Calls the venv's Python directly (not through veneer) to bypass veneer's
+    protection against ad-hoc editable installs. Uses --no-deps so only the
+    source path is added, never pulling in conflicting transitive deps.
+    """
+    if not extra_paths:
+        return True, "no cross-installs needed"
+
+    venv_python = _resolve_venv_python(worktree_path)
+    if venv_python is None:
+        return False, "could not locate venv python for cross-install"
+
+    args = [str(venv_python), "-m", "pip", "install", "--no-deps"]
+    for p in extra_paths:
+        args.extend(["-e", str(p)])
+
+    result = subprocess.run(  # noqa: S603
+        args,
+        cwd=worktree_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return False, f"cross-install failed: {result.stderr.strip()}"
+    return True, f"cross-installed {len(extra_paths)} package(s)"
+
+
+def _resolve_venv_python(worktree_path: Path) -> Path | None:
+    """Return the venv python path from veneer.toml, or None if not found."""
+    veneer_toml = worktree_path / "veneer.toml"
+    if not veneer_toml.is_file():
+        return None
+    try:
+        with veneer_toml.open("rb") as f:
+            raw = tomllib.load(f)
+    except (tomllib.TOMLDecodeError, OSError):
+        return None
+    venv_str = raw.get("python", {}).get("venv", ".venv")
+    venv = (worktree_path / Path(venv_str).expanduser()).resolve()
+    python = venv / "bin" / "python"
+    return python if python.is_file() else None
+
+
+def collect_editable_paths(worktree_path: Path, backend: str = "veneer") -> list[Path]:
+    """Return the editable package paths for a repo.
+
+    For veneer repos: paths from veneer.toml editables.packages.
+    For uv repos: the worktree root itself (install the package).
+    Paths resolved relative to the worktree root.
+    """
+    if backend == "uv":
+        return [worktree_path.resolve()]
+
+    veneer_toml = worktree_path / "veneer.toml"
+    if not veneer_toml.is_file():
+        return []
+    try:
+        with veneer_toml.open("rb") as f:
+            raw = tomllib.load(f)
+    except (tomllib.TOMLDecodeError, OSError):
+        return []
+    packages = raw.get("editables", {}).get("packages", [])
+    return [
+        (worktree_path / Path(p).expanduser()).resolve()
+        for p in packages
+        if isinstance(p, str) and p.strip()
+    ]
+
+
 def _setup_veneer(worktree_path: Path) -> tuple[bool, str]:
     """Run ``veneer update-editables`` in the worktree."""
     result = subprocess.run(
@@ -44,13 +119,7 @@ def _setup_veneer(worktree_path: Path) -> tuple[bool, str]:
         check=False,
     )
     if result.returncode != 0:
-        stderr = result.stderr.strip()
-        if "missing veneer.toml" in stderr or "extends" in stderr:
-            return False, (
-                "veneer setup skipped: veneer.toml uses 'extends' but stack file "
-                "not found — create the parent stack file or run veneer manually"
-            )
-        return False, f"veneer update-editables failed: {stderr}"
+        return False, f"veneer update-editables failed: {result.stderr.strip()}"
     return True, "veneer ok"
 
 
