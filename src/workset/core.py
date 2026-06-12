@@ -7,7 +7,13 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from workset.config import RepoSpec, WorksetConfig, WorksetError, load_config
-from workset.env import detect_backend, run_smoke_test, setup_env
+from workset.env import (
+    collect_editable_paths,
+    cross_install_editables,
+    detect_backend,
+    run_smoke_test,
+    setup_env,
+)
 from workset.git import submodule_init, worktree_add
 
 if TYPE_CHECKING:
@@ -80,6 +86,9 @@ def create_workset(
         result = _setup_repo(spec, workset_path, no_env=no_env, no_smoke=no_smoke)
         results.append(result)
 
+    if not no_env:
+        _cross_install(results)
+
     return WorksetResult(path=workset_path, repos=tuple(results))
 
 
@@ -119,6 +128,32 @@ def _setup_repo(
         env_message=env_message,
         smoke_passed=smoke_passed,
     )
+
+
+def _cross_install(results: list[RepoResult]) -> None:
+    """Install every veneer repo's editables into every other veneer repo's venv.
+
+    This gives each venv visibility into all repos in the workset.
+    Skips uv/none backends — they manage their own envs.
+    """
+    veneer_results = [r for r in results if r.env_backend == "veneer" and r.env_ok]
+    if len(veneer_results) < 2:
+        return
+
+    all_editables: list[Path] = []
+    for result in veneer_results:
+        all_editables.extend(collect_editable_paths(result.path))
+
+    for result in veneer_results:
+        own_editables = set(collect_editable_paths(result.path))
+        extras = [p for p in all_editables if p not in own_editables]
+        if not extras:
+            continue
+        ok, msg = cross_install_editables(result.path, extras)
+        if ok:
+            LOGGER.info("  %s: cross-installed %d package(s)", result.name, len(extras))
+        else:
+            LOGGER.warning("  %s: %s", result.name, msg)
 
 
 def _check_name_collisions(specs: list[RepoSpec]) -> None:

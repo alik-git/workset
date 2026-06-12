@@ -34,6 +34,54 @@ def setup_env(worktree_path: Path, backend: str) -> tuple[bool, str]:
     return True, "no env backend detected"
 
 
+def cross_install_editables(
+    worktree_path: Path,
+    extra_paths: list[Path],
+) -> tuple[bool, str]:
+    """Install extra editable packages into a veneer-managed venv with --no-deps.
+
+    Used by workset to cross-install other repos' packages into this venv.
+    """
+    if not extra_paths:
+        return True, "no cross-installs needed"
+
+    args = ["veneer", "python", "-m", "pip", "install", "--no-deps"]
+    for p in extra_paths:
+        args.extend(["-e", str(p)])
+
+    result = subprocess.run(  # noqa: S603
+        args,
+        cwd=worktree_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return False, f"cross-install failed: {result.stderr.strip()}"
+    return True, f"cross-installed {len(extra_paths)} package(s)"
+
+
+def collect_editable_paths(worktree_path: Path) -> list[Path]:
+    """Return the editable package paths declared in a repo's veneer.toml.
+
+    Paths are resolved relative to the worktree root.
+    """
+    veneer_toml = worktree_path / "veneer.toml"
+    if not veneer_toml.is_file():
+        return []
+    try:
+        with veneer_toml.open("rb") as f:
+            raw = tomllib.load(f)
+    except (tomllib.TOMLDecodeError, OSError):
+        return []
+    packages = raw.get("editables", {}).get("packages", [])
+    return [
+        (worktree_path / Path(p).expanduser()).resolve()
+        for p in packages
+        if isinstance(p, str) and p.strip()
+    ]
+
+
 def _setup_veneer(worktree_path: Path) -> tuple[bool, str]:
     """Run ``veneer update-editables`` in the worktree."""
     result = subprocess.run(
@@ -44,13 +92,7 @@ def _setup_veneer(worktree_path: Path) -> tuple[bool, str]:
         check=False,
     )
     if result.returncode != 0:
-        stderr = result.stderr.strip()
-        if "missing veneer.toml" in stderr or "extends" in stderr:
-            return False, (
-                "veneer setup skipped: veneer.toml uses 'extends' but stack file "
-                "not found — create the parent stack file or run veneer manually"
-            )
-        return False, f"veneer update-editables failed: {stderr}"
+        return False, f"veneer update-editables failed: {result.stderr.strip()}"
     return True, "veneer ok"
 
 

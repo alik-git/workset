@@ -90,21 +90,6 @@ def test_setup_env_veneer_success(
     assert "veneer ok" in msg
 
 
-def test_setup_env_veneer_extends_failure(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Return friendly message when veneer.toml uses extends but stack missing."""
-    monkeypatch.setattr(
-        subprocess,
-        "run",
-        lambda *a, **_kw: subprocess.CompletedProcess(
-            a[0], 2, stdout="", stderr="veneer: missing veneer.toml"
-        ),
-    )
-    ok, msg = setup_env(tmp_path, "veneer")
-    assert ok is False
-    assert "extends" in msg or "stack file" in msg
 
 
 def test_setup_env_uv_success(
