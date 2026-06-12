@@ -131,21 +131,25 @@ def _setup_repo(
 
 
 def _cross_install(results: list[RepoResult]) -> None:
-    """Install every veneer repo's editables into every other veneer repo's venv.
+    """Install all repos' editables into each veneer venv.
 
-    This gives each venv visibility into all repos in the workset.
-    Skips uv/none backends — they manage their own envs.
+    This gives every veneer venv visibility into all repos in the workset —
+    including uv-native (pure Python) repos whose source is installed with
+    --no-deps into the veneer venv.
+    Uv venvs manage their own deps; only veneer venvs receive cross-installs.
     """
     veneer_results = [r for r in results if r.env_backend == "veneer" and r.env_ok]
-    if len(veneer_results) < 2:
+    if not veneer_results:
         return
 
     all_editables: list[Path] = []
-    for result in veneer_results:
-        all_editables.extend(collect_editable_paths(result.path))
+    for result in results:
+        if result.env_backend in {"veneer", "uv"}:
+            paths = collect_editable_paths(result.path, result.env_backend)
+            all_editables.extend(paths)
 
     for result in veneer_results:
-        own_editables = set(collect_editable_paths(result.path))
+        own_editables = set(collect_editable_paths(result.path, "veneer"))
         extras = [p for p in all_editables if p not in own_editables]
         if not extras:
             continue
