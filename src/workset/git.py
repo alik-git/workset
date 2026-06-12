@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import subprocess
-import sys
 from pathlib import Path
 
 from workset.config import WorksetError
+
+LOGGER = logging.getLogger(__name__)
 
 
 def get_branch_worktrees(canonical: Path) -> dict[str, Path]:
@@ -102,10 +104,7 @@ def submodule_init(worktree_path: Path) -> None:
     This may be slow for repos with large binary submodules (e.g. STL files).
     Progress is streamed to stderr so it does not appear hung.
     """
-    print(
-        f"  initializing submodules in {worktree_path.name}...",
-        file=sys.stderr,
-    )
+    LOGGER.info("  initializing submodules in %s...", worktree_path.name)
     result = subprocess.run(
         ["git", "submodule", "update", "--init", "--recursive"],  # noqa: S607
         cwd=worktree_path,

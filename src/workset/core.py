@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import sys
+import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -12,6 +12,8 @@ from workset.git import submodule_init, worktree_add
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -71,7 +73,7 @@ def create_workset(
     specs = [cfg.resolve_spec(s) for s in repo_specs]
     _check_name_collisions(specs)
 
-    print(f"Creating workset at {workset_path}", file=sys.stderr)
+    LOGGER.info("Creating workset at %s", workset_path)
 
     results: list[RepoResult] = []
     for spec in specs:
@@ -90,10 +92,7 @@ def _setup_repo(
 ) -> RepoResult:
     """Set up a single repo worktree and return its result."""
     worktree_path = workset_path / spec.name
-    print(
-        f"  {spec.name}: {spec.canonical.name} → {spec.branch}",
-        file=sys.stderr,
-    )
+    LOGGER.info("  %s: %s → %s", spec.name, spec.canonical.name, spec.branch)
 
     worktree_add(spec.canonical, worktree_path, spec.branch)
     submodule_init(worktree_path)
@@ -105,7 +104,7 @@ def _setup_repo(
     if not no_env and backend != "none":
         env_ok, env_message = setup_env(worktree_path, backend)
         if not env_ok:
-            print(f"    warning: {env_message}", file=sys.stderr)
+            LOGGER.warning("    %s", env_message)
 
     smoke_passed: bool | None = None
     if not no_smoke and env_ok and backend != "none":

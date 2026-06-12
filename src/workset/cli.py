@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import os
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -12,9 +14,37 @@ from workset.core import WorksetResult, create_workset
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+_LOG_FORMAT = "[%(levelname)s] %(message)s"
+_COLOR_FORMAT = "%(log_color)s[%(levelname)s]%(reset)s %(message)s"
+_LOG_COLORS = {
+    "DEBUG": "cyan",
+    "INFO": "bold_white",
+    "WARNING": "yellow",
+    "ERROR": "red",
+}
+LOGGER = logging.getLogger(__name__)
+
+
+def _configure_logging() -> None:
+    """Configure color console logging for the workset CLI."""
+    use_color = not os.environ.get("NO_COLOR") and sys.stderr.isatty()
+    handler = logging.StreamHandler()
+    if use_color:
+        try:
+            import colorlog
+            handler.setFormatter(
+                colorlog.ColoredFormatter(_COLOR_FORMAT, log_colors=_LOG_COLORS)
+            )
+        except ImportError:
+            handler.setFormatter(logging.Formatter(_LOG_FORMAT))
+    else:
+        handler.setFormatter(logging.Formatter(_LOG_FORMAT))
+    logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
+
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the workset command-line interface."""
+    _configure_logging()
     args = list(sys.argv[1:] if argv is None else argv)
     try:
         return _main(args)
@@ -93,16 +123,16 @@ def _cmd_new(args: list[str]) -> int:
 
 
 def _print_result(result: WorksetResult) -> None:
-    """Print a human-readable summary of the workset result."""
-    print(f"\nworkset ready: {result.path}")
+    """Log a human-readable summary of the workset result."""
+    LOGGER.info("workset ready: %s", result.path)
     for repo in result.repos:
         smoke = _smoke_symbol(repo.smoke_passed)
         env_label = (
             f"[{repo.env_backend}]" if repo.env_backend != "none" else "[no env]"
         )
-        print(f"  {smoke} {repo.name}  {env_label}  {repo.branch}")
+        LOGGER.info("  %s %s  %s  %s", smoke, repo.name, env_label, repo.branch)
         if not repo.env_ok:
-            print(f"    ! {repo.env_message}")
+            LOGGER.warning("    %s", repo.env_message)
 
 
 def _smoke_symbol(smoke_passed: bool | None) -> str:
