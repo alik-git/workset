@@ -37,7 +37,9 @@ class WorksetConfig:
             return dest_override
         if self.date_prefix:
             today = datetime.datetime.now(tz=datetime.UTC).date()
-            return self.workset_root / today.strftime("%Y/%m/%d") / slug
+            month = today.strftime("%m-%B").lower()
+            day = today.strftime("%d-%A").lower()
+            return self.workset_root / str(today.year) / month / day / slug
         return self.workset_root / slug
 
     def resolve_spec(self, spec: str) -> RepoSpec:
