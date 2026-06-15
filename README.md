@@ -25,6 +25,19 @@ uv tool install --editable path/to/workset
 workset --help
 ```
 
+With `date_prefix = true`, worksets are created under the shared Ali workflow
+date layout:
+
+```text
+<workset-root>/YYYY/MM-month/DD-ddd/<slug>/
+```
+
+For example:
+
+```text
+~/Projects/worksets/2026/06-june/15-mon/my-task/
+```
+
 ## Development
 
 ```bash

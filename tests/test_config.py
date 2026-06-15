@@ -146,7 +146,7 @@ def test_resolve_dest_with_override(tmp_path: Path) -> None:
 
 
 def test_resolve_dest_date_prefix_has_human_readable_format(tmp_path: Path) -> None:
-    """Date-prefixed path uses YYYY/MM-month/DD-dayname format."""
+    """Date-prefixed path uses YYYY/MM-month/DD-ddd format."""
     cfg = make_config(tmp_path, date_prefix=True)
     dest = cfg.resolve_dest("my-task")
     parts = dest.parts
@@ -154,6 +154,7 @@ def test_resolve_dest_date_prefix_has_human_readable_format(tmp_path: Path) -> N
     year_part, month_part, day_part = parts[slug_idx - 3 : slug_idx]
     assert len(year_part) == 4
     assert "-" in month_part  # e.g. "06-june"
-    assert "-" in day_part  # e.g. "14-sunday"
+    assert "-" in day_part  # e.g. "14-sun"
     assert month_part[2] == "-"
     assert day_part[2] == "-"
+    assert len(day_part) == len("14-sun")

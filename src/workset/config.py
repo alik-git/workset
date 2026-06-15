@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
-import datetime
 import os
 import tomllib
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from workset.paths import dated_dir
 
 
 class WorksetError(Exception):
@@ -36,10 +38,8 @@ class WorksetConfig:
         if dest_override is not None:
             return dest_override
         if self.date_prefix:
-            today = datetime.datetime.now(tz=datetime.UTC).date()
-            month = today.strftime("%m-%B").lower()
-            day = today.strftime("%d-%A").lower()
-            return self.workset_root / str(today.year) / month / day / slug
+            today = datetime.now(tz=UTC).date()
+            return dated_dir(self.workset_root, today) / slug
         return self.workset_root / slug
 
     def resolve_spec(self, spec: str) -> RepoSpec:
