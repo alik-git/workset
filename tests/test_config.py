@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pytest
 
+from workset import config as config_module
 from workset.config import WorksetConfig, WorksetError, load_config
 
 
@@ -21,11 +24,13 @@ def make_config(
     *,
     repos: dict[str, Path] | None = None,
     date_prefix: bool = False,
+    timezone: object = UTC,
 ) -> WorksetConfig:
     """Build a test config with repos pointing at tmp_path subdirs."""
     return WorksetConfig(
         workset_root=tmp_path / "worksets",
         date_prefix=date_prefix,
+        timezone=timezone,
         repos=repos or {},
     )
 
@@ -35,6 +40,7 @@ def test_load_config_returns_defaults_when_missing(tmp_path: Path) -> None:
     cfg = load_config(tmp_path / "nonexistent.toml")
     assert cfg.workset_root == Path.home() / "Projects" / "worksets"
     assert cfg.date_prefix is False
+    assert cfg.timezone is UTC
     assert cfg.repos == {}
 
 
@@ -47,6 +53,7 @@ def test_load_config_parses_repos_and_root(tmp_path: Path) -> None:
 [workset]
 root = "{tmp_path / "worksets"}"
 date_prefix = true
+timezone = "America/Los_Angeles"
 
 [repos]
 my_repo = "{repo_dir}"
@@ -58,7 +65,36 @@ my_repo = "{repo_dir}"
 
     assert cfg.workset_root == tmp_path / "worksets"
     assert cfg.date_prefix is True
+    assert cfg.timezone == ZoneInfo("America/Los_Angeles")
     assert cfg.repos["my_repo"] == repo_dir
+
+
+def test_load_config_raises_on_unknown_timezone(tmp_path: Path) -> None:
+    """Fail clearly when timezone is not a known zoneinfo name."""
+    config_file = tmp_path / "repos.toml"
+    config_file.write_text(
+        """
+[workset]
+timezone = "Mars/Olympus_Mons"
+""",
+        encoding="utf-8",
+    )
+    with pytest.raises(WorksetError, match="unknown timezone"):
+        load_config(config_file)
+
+
+def test_load_config_raises_on_non_string_timezone(tmp_path: Path) -> None:
+    """Fail clearly when timezone has the wrong TOML type."""
+    config_file = tmp_path / "repos.toml"
+    config_file.write_text(
+        """
+[workset]
+timezone = 123
+""",
+        encoding="utf-8",
+    )
+    with pytest.raises(WorksetError, match="timezone"):
+        load_config(config_file)
 
 
 def test_load_config_raises_on_bad_toml(tmp_path: Path) -> None:
@@ -158,3 +194,26 @@ def test_resolve_dest_date_prefix_has_human_readable_format(tmp_path: Path) -> N
     assert month_part[2] == "-"
     assert day_part[2] == "-"
     assert len(day_part) == len("14-sun")
+
+
+def test_resolve_dest_date_prefix_uses_config_timezone(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Date-prefixed path uses the configured local date, not the UTC date."""
+
+    class FixedDatetime:
+        @classmethod
+        def now(cls, tz: object = None) -> object:
+            assert tz is UTC
+            return datetime(2026, 6, 15, 6, 30, tzinfo=UTC)
+
+    monkeypatch.setattr(config_module, "datetime", FixedDatetime)
+    cfg = make_config(
+        tmp_path,
+        date_prefix=True,
+        timezone=ZoneInfo("America/Los_Angeles"),
+    )
+
+    dest = cfg.resolve_dest("my-task")
+
+    assert dest == tmp_path / "worksets" / "2026" / "06-june" / "14-sun" / "my-task"

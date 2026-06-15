@@ -38,6 +38,17 @@ For example:
 ~/Projects/worksets/2026/06-june/15-mon/my-task/
 ```
 
+Configure dated worksets in `~/.config/workset/repos.toml`:
+
+```toml
+[workset]
+root = "~/Projects/worksets"
+date_prefix = true
+timezone = "America/Los_Angeles"
+```
+
+When `timezone` is omitted, `workset` uses UTC for date-prefixed paths.
+
 ## Development
 
 ```bash

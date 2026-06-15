@@ -5,9 +5,10 @@ from __future__ import annotations
 import os
 import tomllib
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, tzinfo
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from workset.paths import dated_dir
 
@@ -31,6 +32,7 @@ class WorksetConfig:
 
     workset_root: Path
     date_prefix: bool
+    timezone: tzinfo
     repos: dict[str, Path]
 
     def resolve_dest(self, slug: str, dest_override: Path | None = None) -> Path:
@@ -38,7 +40,7 @@ class WorksetConfig:
         if dest_override is not None:
             return dest_override
         if self.date_prefix:
-            today = datetime.now(tz=UTC).date()
+            today = datetime.now(tz=UTC).astimezone(self.timezone).date()
             return dated_dir(self.workset_root, today) / slug
         return self.workset_root / slug
 
@@ -95,6 +97,7 @@ def load_config(config_path: Path | None = None) -> WorksetConfig:
         return WorksetConfig(
             workset_root=Path.home() / "Projects" / "worksets",
             date_prefix=False,
+            timezone=UTC,
             repos={},
         )
 
@@ -109,14 +112,30 @@ def load_config(config_path: Path | None = None) -> WorksetConfig:
         Path(str(ws.get("root", "~/Projects/worksets"))).expanduser().resolve()
     )
     date_prefix = bool(ws.get("date_prefix", False))
+    timezone = _resolve_timezone(ws.get("timezone"))
 
     repos = {
         name: Path(str(p)).expanduser().resolve()
         for name, p in raw.get("repos", {}).items()
     }
     return WorksetConfig(
-        workset_root=workset_root, date_prefix=date_prefix, repos=repos
+        workset_root=workset_root,
+        date_prefix=date_prefix,
+        timezone=timezone,
+        repos=repos,
     )
+
+
+def _resolve_timezone(value: Any) -> tzinfo:
+    """Resolve an optional timezone config value."""
+    if value is None:
+        return UTC
+    if not isinstance(value, str):
+        raise WorksetError("config field 'timezone' must be a string")
+    try:
+        return ZoneInfo(value)
+    except ZoneInfoNotFoundError as exc:
+        raise WorksetError(f"unknown timezone {value!r}") from exc
 
 
 def _require_git_repo(path: Path) -> None:
