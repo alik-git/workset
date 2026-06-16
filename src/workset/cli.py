@@ -83,6 +83,7 @@ def _cmd_new(args: list[str]) -> int:
     dest: Path | None = None
     no_env = False
     no_smoke = False
+    fetch_latest = True
     repo_specs: list[str] = []
 
     i = 0
@@ -99,6 +100,9 @@ def _cmd_new(args: list[str]) -> int:
             i += 1
         elif arg == "--no-smoke":
             no_smoke = True
+            i += 1
+        elif arg == "--no-fetch-latest":
+            fetch_latest = False
             i += 1
         elif arg.startswith("-"):
             LOGGER.error("unknown option: %s", arg)
@@ -118,6 +122,7 @@ def _cmd_new(args: list[str]) -> int:
         dest=dest,
         no_env=no_env,
         no_smoke=no_smoke,
+        fetch_latest=fetch_latest,
     )
     _print_result(result)
     return 0 if result.ok else 1
@@ -156,8 +161,8 @@ def _print_help() -> None:
 
 def _print_new_help() -> None:
     print(
-        "usage: workset new <slug> [--dest <path>] [--no-env] [--no-smoke]"
-        " <repo>:<branch> ...\n"
+        "usage: workset new <slug> [--dest <path>] [--no-env] [--no-smoke] "
+        "[--no-fetch-latest] <repo>:<branch> ...\n"
         "\nArguments:\n"
         "  slug             Short identifier for this workset\n"
         "  repo:branch      Repo name (from config or path) and branch\n"
@@ -165,6 +170,8 @@ def _print_new_help() -> None:
         "  --dest <path>    Override destination path\n"
         "  --no-env         Skip environment setup\n"
         "  --no-smoke       Skip smoke tests\n"
+        "  --no-fetch-latest\n"
+        "                   Create new branches from the canonical checkout's HEAD\n"
         "\nExamples:\n"
         "  workset new api-refactor api:feat/refactor\n"
         "  workset new checkout-flow api:feat/checkout-flow web:main\n"

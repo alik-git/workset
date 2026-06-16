@@ -59,11 +59,38 @@ def branch_exists(canonical: Path, branch: str) -> bool:
     return result.returncode == 0
 
 
-def worktree_add(canonical: Path, dest: Path, branch: str) -> None:
+def fetch_latest_base(
+    canonical: Path, remote: str = "origin", branch: str = "main"
+) -> str:
+    """Fetch the latest remote base and return the remote-tracking ref."""
+    result = subprocess.run(  # noqa: S603
+        ["git", "fetch", remote, f"{branch}:refs/remotes/{remote}/{branch}"],  # noqa: S607
+        cwd=canonical,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise WorksetError(
+            f"git fetch {remote} {branch} failed in {canonical}:\n"
+            f"{result.stderr.strip()}",
+        )
+    return f"{remote}/{branch}"
+
+
+def worktree_add(
+    canonical: Path,
+    dest: Path,
+    branch: str,
+    *,
+    fetch_latest: bool = True,
+) -> None:
     """Add a git worktree at dest, checking out or creating branch.
 
     Pre-checks for branch collision and raises WorksetError with a clear
-    message instead of letting git fail with a raw fatal.
+    message instead of letting git fail with a raw fatal. New branches are
+    created from the freshly fetched remote main by default so stale canonical
+    checkouts do not leak old commits into new worksets.
     """
     checked_out = get_branch_worktrees(canonical)
     if branch in checked_out:
@@ -78,11 +105,12 @@ def worktree_add(canonical: Path, dest: Path, branch: str) -> None:
     dest.mkdir(parents=True, exist_ok=True)
 
     exists = branch_exists(canonical, branch)
-    cmd = (
-        ["git", "worktree", "add", str(dest), branch]
-        if exists
-        else ["git", "worktree", "add", "-b", branch, str(dest)]
-    )
+    if exists:
+        cmd = ["git", "worktree", "add", str(dest), branch]
+    else:
+        cmd = ["git", "worktree", "add", "-b", branch, str(dest)]
+        if fetch_latest:
+            cmd.append(fetch_latest_base(canonical))
 
     result = subprocess.run(  # noqa: S603
         cmd,

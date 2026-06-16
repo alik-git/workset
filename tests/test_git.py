@@ -11,6 +11,7 @@ from workset.config import WorksetError
 from workset.git import (
     _parse_worktree_list,
     branch_exists,
+    fetch_latest_base,
     get_branch_worktrees,
     submodule_init,
     worktree_add,
@@ -116,6 +117,42 @@ def test_branch_exists_returns_false_when_nonzero(
     assert branch_exists(tmp_path, "feat/x") is False
 
 
+def test_fetch_latest_base_fetches_origin_main(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Fetch origin/main and return the remote-tracking base ref."""
+    calls: list[list[str]] = []
+
+    def fake_run(  # type: ignore[misc]
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    assert fetch_latest_base(tmp_path) == "origin/main"
+    assert calls == [["git", "fetch", "origin", "main:refs/remotes/origin/main"]]
+
+
+def test_fetch_latest_base_raises_on_fetch_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Raise WorksetError when the remote base cannot be fetched."""
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **_kw: subprocess.CompletedProcess(
+            a[0], 128, stdout="", stderr="fatal"
+        ),
+    )
+
+    with pytest.raises(WorksetError, match="git fetch origin main failed"):
+        fetch_latest_base(tmp_path)
+
+
 def test_worktree_add_raises_on_collision(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -152,7 +189,43 @@ def test_worktree_add_creates_new_branch(
 
     worktree_add(tmp_path, dest, "feat/new-branch")
 
-    assert calls[0][3:5] == ["-b", "feat/new-branch"]
+    assert calls == [
+        ["git", "fetch", "origin", "main:refs/remotes/origin/main"],
+        [
+            "git",
+            "worktree",
+            "add",
+            "-b",
+            "feat/new-branch",
+            str(dest),
+            "origin/main",
+        ],
+    ]
+
+
+def test_worktree_add_can_skip_fetching_latest_base(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Use old HEAD-based branch creation when fetch_latest is disabled."""
+    calls: list[list[str]] = []
+    dest = tmp_path / "new_wt"
+
+    monkeypatch.setattr("workset.git.get_branch_worktrees", lambda _: {})
+    monkeypatch.setattr("workset.git.branch_exists", lambda _p, _b: False)
+
+    def fake_run(  # type: ignore[misc]
+        args: list[str], **_kwargs: object
+    ) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        dest.mkdir(parents=True, exist_ok=True)
+        return subprocess.CompletedProcess(args, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    worktree_add(tmp_path, dest, "feat/new-branch", fetch_latest=False)
+
+    assert calls == [["git", "worktree", "add", "-b", "feat/new-branch", str(dest)]]
 
 
 def test_worktree_add_checks_out_existing_branch(
@@ -177,8 +250,7 @@ def test_worktree_add_checks_out_existing_branch(
 
     worktree_add(tmp_path, dest, "main")
 
-    assert "-b" not in calls[0]
-    assert "main" in calls[0]
+    assert calls == [["git", "worktree", "add", str(dest), "main"]]
 
 
 def test_worktree_add_raises_on_git_failure(
@@ -200,7 +272,7 @@ def test_worktree_add_raises_on_git_failure(
     )
 
     with pytest.raises(WorksetError, match="git worktree add failed"):
-        worktree_add(tmp_path, dest, "feat/x")
+        worktree_add(tmp_path, dest, "feat/x", fetch_latest=False)
 
 
 def test_submodule_init_calls_git(

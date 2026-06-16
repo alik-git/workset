@@ -55,6 +55,7 @@ def create_workset(
     *,
     no_env: bool = False,
     no_smoke: bool = False,
+    fetch_latest: bool = True,
     config: WorksetConfig | None = None,
 ) -> WorksetResult:
     """Create a workset: one worktree per repo-spec, env set up, smoke tested.
@@ -65,6 +66,7 @@ def create_workset(
         dest: Override destination path. Uses config default when None.
         no_env: Skip environment setup.
         no_smoke: Skip smoke tests.
+        fetch_latest: Fetch origin/main before creating new branch worktrees.
         config: Override config. Loaded from disk when None.
 
     Returns:
@@ -83,7 +85,13 @@ def create_workset(
 
     results: list[RepoResult] = []
     for spec in specs:
-        result = _setup_repo(spec, workset_path, no_env=no_env, no_smoke=no_smoke)
+        result = _setup_repo(
+            spec,
+            workset_path,
+            no_env=no_env,
+            no_smoke=no_smoke,
+            fetch_latest=fetch_latest,
+        )
         results.append(result)
 
     if not no_env:
@@ -98,12 +106,13 @@ def _setup_repo(
     *,
     no_env: bool,
     no_smoke: bool,
+    fetch_latest: bool,
 ) -> RepoResult:
     """Set up a single repo worktree and return its result."""
     worktree_path = workset_path / spec.name
     LOGGER.info("  %s: %s → %s", spec.name, spec.canonical.name, spec.branch)
 
-    worktree_add(spec.canonical, worktree_path, spec.branch)
+    worktree_add(spec.canonical, worktree_path, spec.branch, fetch_latest=fetch_latest)
     submodule_init(worktree_path)
 
     backend = detect_backend(worktree_path)
