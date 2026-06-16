@@ -166,8 +166,7 @@ def _print_new_help() -> None:
         "  --no-env         Skip environment setup\n"
         "  --no-smoke       Skip smoke tests\n"
         "\nExamples:\n"
-        "  workset new improve-viewer minerva_mujoco_viewer:feat/improve-viewer\n"
-        "  workset new leansim2sim minerva_lab:feat/leansim2sim"
-        " motion_data_processing:main\n"
-        "  workset new quick-fix --dest /tmp/quick minerva_lab:main",
+        "  workset new api-refactor api:feat/refactor\n"
+        "  workset new checkout-flow api:feat/checkout-flow web:main\n"
+        "  workset new quick-fix --dest /tmp/quick api:main",
     )

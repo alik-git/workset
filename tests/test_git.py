@@ -17,15 +17,15 @@ from workset.git import (
 )
 
 _PORCELAIN_OUTPUT = """\
-worktree /home/ali/Projects/repos/minerva_lab
+worktree /home/dev/repos/api
 HEAD abcdef1234567890abcdef1234567890abcdef12
 branch refs/heads/main
 
-worktree /home/ali/Projects/worksets/leansim2sim/minerva_lab
+worktree /home/dev/worksets/api-refactor/api
 HEAD deadbeef12345678deadbeef12345678deadbeef
-branch refs/heads/feat/leansim2sim
+branch refs/heads/feat/api-refactor
 
-worktree /home/ali/Projects/worksets/other/minerva_lab
+worktree /home/dev/worksets/other/api
 HEAD cafebabe12345678cafebabe12345678cafebabe
 detached
 
@@ -36,9 +36,9 @@ def test_parse_worktree_list_finds_branches() -> None:
     """Parse porcelain output into branch → path mapping."""
     result = _parse_worktree_list(_PORCELAIN_OUTPUT)
 
-    assert result["main"] == Path("/home/ali/Projects/repos/minerva_lab")
-    assert result["feat/leansim2sim"] == Path(
-        "/home/ali/Projects/worksets/leansim2sim/minerva_lab",
+    assert result["main"] == Path("/home/dev/repos/api")
+    assert result["feat/api-refactor"] == Path(
+        "/home/dev/worksets/api-refactor/api",
     )
 
 

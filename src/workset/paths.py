@@ -1,4 +1,4 @@
-"""Shared path helpers for Ali workflow tools."""
+"""Shared path helpers for dated workflow tools."""
 
 from __future__ import annotations
 

@@ -4,15 +4,15 @@ build-backend = "hatchling.build"
 
 [project]
 name = "workset"
-version = "0.2.3"
+version = "0.2.4"
 description = "Create and initialize isolated git worktree worksets."
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-  { name = "Ali K", email = "akuwajerwala@minervahumanoids.com" },
+  { name = "Ali K", email = "alikgithb@gmail.com" },
 ]
 maintainers = [
-  { name = "Ali K", email = "akuwajerwala@minervahumanoids.com" },
+  { name = "Ali K", email = "alikgithb@gmail.com" },
 ]
 keywords = ["python", "git", "worktree", "workset", "devtools"]
 classifiers = [

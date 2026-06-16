@@ -46,11 +46,11 @@ def test_infer_import_name_from_veneer_editables(tmp_path: Path) -> None:
     """Infer import name from veneer.toml editables packages."""
     lines = (
         '[python]\nbase_conda_env = "x"\n'
-        '[editables]\npackages = ["source/minerva_lab"]\n'
+        '[editables]\npackages = ["source/example_service"]\n'
     )
     (tmp_path / "veneer.toml").write_text(lines, encoding="utf-8")
-    (tmp_path / "source" / "minerva_lab").mkdir(parents=True)
-    assert infer_import_name(tmp_path) == "minerva_lab"
+    (tmp_path / "source" / "example_service").mkdir(parents=True)
+    assert infer_import_name(tmp_path) == "example_service"
 
 
 def test_infer_import_name_from_src_dir(tmp_path: Path) -> None:

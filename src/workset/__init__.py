@@ -7,4 +7,4 @@ from workset.core import RepoResult, WorksetResult, create_workset
 
 __all__ = ["WorksetError", "RepoResult", "WorksetResult", "create_workset"]
 
-__version__ = "0.2.3"
+__version__ = "0.2.4"

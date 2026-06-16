@@ -13,6 +13,12 @@ environment ready to go. `workset` automates the setup so you can go from
 uv tool install workset
 ```
 
+Or with pip:
+
+```bash
+python -m pip install workset
+```
+
 Or install from source:
 
 ```bash
@@ -25,8 +31,24 @@ uv tool install --editable path/to/workset
 workset --help
 ```
 
-With `date_prefix = true`, worksets are created under the shared Ali workflow
-date layout:
+## Configure repos
+
+`workset` resolves specs like `api:feat/refactor` from
+`~/.config/workset/repos.toml`. Keep these repo paths pointed at stable
+canonical checkouts, not temporary worksets.
+
+```toml
+[workset]
+root = "~/worksets"
+date_prefix = true
+timezone = "America/Los_Angeles"
+
+[repos]
+api = "~/repos/api"
+web = "~/repos/web"
+```
+
+With `date_prefix = true`, worksets are created under a dated layout:
 
 ```text
 <workset-root>/YYYY/MM-month/DD-ddd/<slug>/
@@ -35,19 +57,36 @@ date layout:
 For example:
 
 ```text
-~/Projects/worksets/2026/06-june/15-mon/my-task/
-```
-
-Configure dated worksets in `~/.config/workset/repos.toml`:
-
-```toml
-[workset]
-root = "~/Projects/worksets"
-date_prefix = true
-timezone = "America/Los_Angeles"
+~/worksets/2026/06-june/15-mon/my-task/
 ```
 
 When `timezone` is omitted, `workset` uses UTC for date-prefixed paths.
+
+## First successful workset
+
+Start with one repo alias and one new branch:
+
+```bash
+git clone git@github.com:your-org/api.git ~/repos/api
+workset new api-refactor api:feat/refactor
+```
+
+That creates a new workset directory, adds a git worktree for `api`, initializes
+submodules, and prepares the repo environment when it recognizes the tooling.
+
+For a task that spans multiple repos:
+
+```bash
+git clone git@github.com:your-org/web.git ~/repos/web
+workset new checkout-flow api:feat/checkout-flow web:main
+```
+
+You can also pass a repo path directly when you do not want to configure an
+alias yet:
+
+```bash
+workset new quick-fix ~/repos/api:main
+```
 
 ## Development
 
